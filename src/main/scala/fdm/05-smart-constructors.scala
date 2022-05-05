@@ -1,5 +1,9 @@
 package fdm
 
+import java.net.Inet4Address
+import java.security.Timestamp
+import java.time.Instant
+
 object newtypes {
 
   // Nominal typing
@@ -41,6 +45,12 @@ object newtypes {
  * only valid data, but without complicated data types.
  */
 object smart_constructors {
+
+  sealed trait AccountActivity
+  object AccountActivity {
+    // start <= end
+    final case class LoanGranted(start: java.time.Instant, end: java.time.Instant) extends AccountActivity
+  }
 
   // This is how we could achieve precision with ADTs.
   // Very costly and it may not pay for itself.
@@ -142,6 +152,7 @@ object smart_constructors {
   // We must use sealed abstract and private keyword to make sure we don't accidentally use the wrong constructor.
   sealed abstract case class Email private (value: String)
 
+  // Note: Methods that modify the original data structure should be placed in the case class itself. Methods that create a new data structure should be placed in the companion object.
   object Email {
     def fromString(email: String): Option[Email] =
       // This new Email(email) {} creates an anonymous class which is a subtype of Email (because you can't create an instance of a sealed abstract case class).
@@ -170,6 +181,7 @@ object smart_constructors {
    *
    * Create a smart constructor for `Age` that ensures the integer is between 0 and 120.
    */
+  // In scala3 is simpler, all we have to do is make the constructor private.
   sealed abstract case class Age private (value: Int)
   object Age {
     def fromInt(i: Int): Option[Age] =
@@ -193,9 +205,9 @@ object smart_constructors {
 
   sealed trait InvalidPassword
   object InvalidPassword {
-    final case class TooShort(message: String)    extends InvalidPassword
-    final case class TooLong(message: String)     extends InvalidPassword
-    final case class NoNumber(message: String)    extends InvalidPassword
+    final case class TooShort(message: String)          extends InvalidPassword
+    final case class TooLong(message: String)           extends InvalidPassword
+    final case class NoNumber(message: String)          extends InvalidPassword
     final case class InvalidCharacters(message: String) extends InvalidPassword
 
   }
@@ -218,7 +230,15 @@ object applied_smart_constructors {
    * Identify the weaknesses in this data type, and use smart constructors (and possibly other
    * techniques) to correct them.
    */
-  final case class BankAccount(id: String, name: String, balance: Double, opened: java.time.Instant)
+  sealed abstract case class AccountId private (value: String)
+  sealed abstract case class AccountName private (value: String)
+  sealed trait AccountBalance
+  object AccountBalance {
+    final case class USD(dollar: BigDecimal, cents: BigDecimal) extends AccountBalance
+    final case class EUR(euro: BigDecimal, cents: BigDecimal)   extends AccountBalance
+  }
+
+  final case class BankAccount(id: AccountId, name: AccountName, balance: AccountBalance, opened: java.time.Instant)
 
   /**
    * EXERCISE 2
@@ -226,7 +246,10 @@ object applied_smart_constructors {
    * Identify the weaknesses in this data type, and use smart constructors (and possibly other
    * techniques) to correct them.
    */
-  final case class Person(age: Int, name: String, salary: Double)
+  final case class Person(age: Age, name: Name, salary: Salary)
+  sealed abstract case class Age private (value: Int)
+  sealed abstract case class Name private (value: String)
+  sealed abstract case class Salary private (value: Double)
 
   /**
    * EXERCISE 3
@@ -234,11 +257,19 @@ object applied_smart_constructors {
    * Identify the weaknesses in this data type, and use smart constructors (and possibly other
    * techniques) to correct them.
    */
-  final case class SecurityEvent(machine: String, timestamp: String, eventType: Int)
+  final case class SecurityEvent(machine: Inet4Address, timestamp: Instant, eventType: EventType)
 
-  object EventType {
-    val PortScanning    = 0
-    val DenialOfService = 1
-    val InvalidLogin    = 2
+  sealed trait EventType {
+    def toInt: Int
+  }
+  case object PortScanning extends EventType {
+    def toInt = 0
+  }
+  case object DenialOfService extends EventType {
+    def toInt = 1
+  }
+
+  case object InvalidLogin extends EventType {
+    def toInt = 2
   }
 }

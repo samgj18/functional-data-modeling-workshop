@@ -1,4 +1,3 @@
-
 sealed abstract case class Record private (name: String, year: Int)
 
 object Record {

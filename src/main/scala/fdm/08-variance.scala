@@ -22,7 +22,7 @@ object subtyping {
    * Determine the relationship between `Animal` and `Dog`, and encode that using either
    * `IsSubtypeOf` or `IsSupertypeOf`.
    */
-  type Exercise1 = TODO
+  type Exercise1 = IsSupertypeOf[Animal, Dog]
 
   /**
    * EXERCISE 2
@@ -30,7 +30,7 @@ object subtyping {
    * Determine the relationship between `Dog` and `Animal` (in that order), and encode that using
    * either `IsSubtypeOf` or `IsSupertypeOf`.
    */
-  type Exercise2 = TODO
+  type Exercise2 = IsSubtypeOf[Dog, Animal]
 
   /**
    * EXERCISE 3
@@ -38,7 +38,7 @@ object subtyping {
    * Determine the relationship between `Animal` and `Cat`, and encode that using either
    * `IsSubtypeOf` or `IsSupertypeOf`.
    */
-  type Exercise3 = TODO
+  type Exercise3 = IsSupertypeOf[Animal, Cat]
 
   /**
    * EXERCISE 4
@@ -46,7 +46,7 @@ object subtyping {
    * Determine the relationship between `Cat` and `Animal` (in that order), and encode that using
    * either `IsSubtypeOf` or `IsSupertypeOf`.
    */
-  type Exercise4 = TODO
+  type Exercise4 = IsSubtypeOf[Cat, Animal]
 
   /**
    * EXERCISE 5
@@ -58,12 +58,13 @@ object subtyping {
    * In this exercise, use the right type operator such that the examples that should compile do
    * compile, but the examples that should not compile do not compile.
    */
-  def isInstanceOf[A, B](a: A): Unit = ???
+  // Going from a subtype to a supertype is called widening.
+  def isInstanceOf[A, B >: A](a: A): Unit = ???
 
-  lazy val mustCompile1    = isInstanceOf[Ripley.type, Dog](Ripley)
-  lazy val mustCompile2    = isInstanceOf[Midnight.type, Cat](Midnight)
-  lazy val mustNotCompile1 = isInstanceOf[Ripley.type, Cat](Ripley)
-  lazy val mustNotCompile2 = isInstanceOf[Midnight.type, Dog](Midnight)
+  lazy val mustCompile1 = isInstanceOf[Ripley.type, Dog](Ripley)
+  lazy val mustCompile2 = isInstanceOf[Midnight.type, Cat](Midnight)
+  /*lazy val mustNotCompile1 = isInstanceOf[Ripley.type, Cat](Ripley)
+  lazy val mustNotCompile2 = isInstanceOf[Midnight.type, Dog](Midnight)*/
 
   /**
    * EXERCISE 6
@@ -71,10 +72,14 @@ object subtyping {
    * The following data type imposes no restriction on the guests who stay at the hotel. Using
    * the subtyping or supertyping operators, ensure that only animals may stay at the hotel.
    */
-  final case class PetHotel[A](rooms: List[A])
+  final case class PetHotel[A <: Animal](rooms: List[A])
 }
 
-/**
+/** What means a code to be antimodular?
+ * Antimodularity is tangling of two unrelated concerns, i.e. when a function needs to check whether
+ * a value is a none or a some but has no way to pass that information to another function, therefore
+ * the other function needs to check the value itself.
+ *
  * Generic ("parametrically polymorphic") data types with simple, unadorned type parameters are
  * referred to as "invariant". For some invariant generic data type `Box[A]`, there is no
  * relationship between the types `Box[A]` and `Box[B]`, unless `A` and `B` are the same types,
@@ -93,6 +98,8 @@ object invariance {
     def book(pet: A): Unit = println(s"Booked a room for ${pet}")
   }
 
+  //  TRUE:   Dog is a subtype of Animal
+  //  FALSE:  PetHotel[Dog] is a subtype of PetHotel[Animal]
   def bookRipley(dogHotel: PetHotel[Dog]) = dogHotel.book(Ripley)
 
   def bookMidnight(catHotel: PetHotel[Cat]) = catHotel.book(Midnight)
@@ -105,7 +112,11 @@ object invariance {
    *
    * Take note of your findings.
    */
-  def bookMidnightAndRipley(animalHotel: PetHotel[Animal]): Unit = ???
+  def bookMidnightAndRipley(animalHotel: PetHotel[Animal]): Unit = {
+    // bookMidnight(animalHotel)
+    // bookRipley(animalHotel)
+    // Won't compile because the type of animalHotel is PetHotel[Animal] and not PetHotel[Cat] or PetHotel[Dog]
+  }
 
   trait PetDeliveryService[A <: Animal] {
     def acceptDelivery: A
@@ -127,7 +138,10 @@ object invariance {
    *
    * Take note of your findings.
    */
-  def acceptRipleyDogAnimal(delivery: PetDeliveryService[Ripley.type]): Unit = ???
+  def acceptRipleyDogAnimal(delivery: PetDeliveryService[Ripley.type]): Unit =
+    acceptRipley(delivery)
+  // acceptDog(delivery)
+  // acceptAnimal(delivery)
 }
 
 /**
@@ -156,9 +170,20 @@ object covariance {
    * `A` never occurs as input to any method on `PetDeliveryService` (it occurs only as output of
    * the `acceptDelivery` method).
    */
-  trait PetDeliveryService[A <: Animal] {
+  trait PetDeliveryService[+A <: Animal] {
     def acceptDelivery: A
+    // def deliver(animal: A): Unit // Not possible because A is covariant
   }
+
+  // You can only add a + to an A if the data type holding the A is a producer of A.
+  // If the data type has a single method that is a consumer of A, you can't add a + to it.
+  // What the + is doing is saying that:
+  //   if A <: B, then F[B] >: F[B]
+  // Makes true that
+  type IsSubtypeOf[A, B >: A]
+  type IsSupertypeOf[A, B <: A]
+  type ExerciseX = Dog IsSubtypeOf Animal
+  type ExerciseY = PetDeliveryService[Dog] IsSubtypeOf PetDeliveryService[Animal]
 
   def acceptRipley(delivery: PetDeliveryService[Ripley.type]): Ripley.type = delivery.acceptDelivery
 
@@ -176,7 +201,11 @@ object covariance {
    *
    * Take note of your findings.
    */
-  def acceptRipleyDogAnimal(delivery: PetDeliveryService[Ripley.type]): Unit = ???
+  def acceptRipleyDogAnimal(delivery: PetDeliveryService[Ripley.type]): Unit = {
+    acceptRipley(delivery)
+    acceptDog(delivery)
+    acceptAnimal(delivery)
+  }
 
   /**
    * EXERCISE 3
@@ -190,9 +219,12 @@ object covariance {
    * Following the pattern shown in `concat`, make an `append` method that compiles.
    */
   sealed trait List[+A] {
+    def foreach[U](f: A => U): Unit =
+      ??? // This compiles because we are flipping the variance by changing the relationship between producer and consumer.
+
     def concat[A1 >: A](that: List[A1]): List[A1] = ???
 
-    // def append(a: A): List[A]
+    def append[A1 >: A](a: A1): List[A1] = ???
   }
 }
 
@@ -208,6 +240,11 @@ object contravariance {
   object Midnight extends Cat
   object Ripley   extends Dog
 
+  // Contravariance on the type parameter A
+  // A <: B ==> F[A] >: F[B]
+  // Covariance on the type parameter A
+  // A >: B ==> F[A] >: F[B]
+
   /**
    * EXERCISE 1
    *
@@ -215,7 +252,7 @@ object contravariance {
    * never occurs as output from any method on `PetHotel` (it occurs only as input to the `book`
    * method).
    */
-  trait PetHotel[A <: Animal] {
+  trait PetHotel[-A <: Animal] {
     def book(pet: A): Unit = println(s"Booked a room for ${pet}")
   }
 
@@ -231,7 +268,8 @@ object contravariance {
    *
    * Take note of your findings.
    */
-  def bookMidnightAndRipley(animalHotel: PetHotel[Animal]): Unit = ???
+  def bookMidnightAndRipley(animalHotel: PetHotel[Animal]): Unit =
+    bookRipley(animalHotel)
 
   /**
    * EXERCISE 3
@@ -245,9 +283,17 @@ object contravariance {
    * Following the pattern shown in `merge`, make a `fallback` method that compiles.
    */
   sealed trait Consumer[-A] {
+    def accept(a: A): Unit = ???
+
     def merge[A1 <: A](that: Consumer[A1]): Consumer[A1] = ???
 
-    /// def fallback[A](that: Consumer[A]): Consumer[A]
+    def fallback[A1 <: A](that: Consumer[A1]): Consumer[A1] = new Consumer[A1] {
+      override def accept(a: A1): Unit =
+        try super.accept(a)
+        catch {
+          case _: Throwable => that.accept(a)
+        }
+    }
   }
 }
 
@@ -264,7 +310,7 @@ object variance_zeros {
    * The type `Nothing` can be used when a covariant type parameter is not being used. For example,
    * an empty list does not use any element type, because it has no elements.
    */
-  type Answer1
+  type Answer1           = Nothing
   type UnusedListElement = List[Answer1]
 
   /**
@@ -273,8 +319,16 @@ object variance_zeros {
    * The type `Any` can be used when a contravariant type parameter is not being used. For example,
    * a constant function does not use its input element.
    */
-  type Answer2
+  type Answer2                 = Any
   type UnusedFunctionInput[+B] = Answer2 => B
+
+  // Function[-A, +B] is contravariant on A (input), covariant on B (output)
+
+  trait Foo[-A, +B, -C]
+  type Answer3[-C] = Foo[Any, Nothing, C]
+
+  trait Bar[-A, B, -C, +D]
+  type Answer4[-A, +D] = Bar[A, Unit, Any, D] // Unit is the way to switch an invariant parameter.
 }
 
 object advanced_variance {
@@ -285,7 +339,7 @@ object advanced_variance {
    * Given that a workflow is designed to consume some input, and either error or produce an
    * output value, choose the appropriate variance for the workflow type parameters.
    */
-  final case class Workflow[Input, Error, Output](run: Input => Either[Error, Output]) {
+  final case class Workflow[-Input, +Error, +Output](run: Input => Either[Error, Output]) {
     def map[NewOutput](f: Output => NewOutput): Workflow[Input, Error, NewOutput] = Workflow(i => run(i).map(f))
 
     /**
@@ -294,7 +348,9 @@ object advanced_variance {
      * Add the appropriate variance annotations to the following method, and see if you can
      * implement it by following its types.
      */
-    // def flatMap[NewOutput](f: Output => Workflow[Input, Error, NewOutput]): Workflow[Input, Error, NewOutput] = ???
+    def flatMap[Input1 <: Input, Error1 >: Error, NewOutput](
+        f: Output => Workflow[Input1, Error1, NewOutput]
+    ): Workflow[Input, Error, NewOutput] = ???
 
     /**
      * EXERCISE 3

@@ -13,8 +13,8 @@ object subtyping {
   object Midnight extends Cat
   object Ripley   extends Dog
 
-  type IsSubtypeOf[A, B >: A]
-  type IsSupertypeOf[A, B <: A]
+  type IsSubtypeOf[A, B >: A]   // A is a subtype of B
+  type IsSupertypeOf[A, B <: A] // B is a subtype of A
 
   /**
    * EXERCISE 1

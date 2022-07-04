@@ -449,6 +449,9 @@ object delete_empty {
     final case class EUR(euros: Int, cents: Int)   extends Currency
     case object None                               extends Currency // Is always a good practice to NOT have an empty case class.
   }*/
+
+  // Constructors should go in the companion object
+  // Functions modifying the data structure should go in the class itself
   object Currency {
     final case class USD(dollars: Int, cents: Int) extends Currency
     final case class EUR(euros: Int, cents: Int)   extends Currency
